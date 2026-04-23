@@ -25,6 +25,7 @@
       font-family: 'Courier New', Courier, monospace;
       min-height: 100vh;
       overflow-x: hidden;
+      position: relative;
     }
 
     /* SCANLINES */
@@ -36,6 +37,31 @@
       pointer-events: none;
       z-index: 9999;
     }
+
+    /* ── YENİ: ESP32 Donanım Monitörü ── */
+    .hw-monitor {
+      position: fixed;
+      top: 20px; 
+      right: 20px;
+      background: rgba(13, 17, 23, 0.85);
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: right;
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,212,255,0.1);
+    }
+    .hw-monitor .hw-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 4px;
+    }
+    .hw-monitor .hw-row:last-child { margin-bottom: 0; }
+    .hw-val { font-weight: bold; color: var(--accent); transition: color 0.1s; }
 
     /* HEADER */
     header {
@@ -169,6 +195,13 @@
       font-size: .8rem;
       line-height: 1.9;
       overflow-x: auto;
+      height: 280px;
+      display: flex;
+      flex-direction: column;
+    }
+    .term-body {
+      flex-grow: 1;
+      overflow-y: auto;
     }
     .t-prompt { color: var(--accent2); }
     .t-wifi   { color: var(--accent); }
@@ -208,9 +241,32 @@
 
     /* FOOTER */
     footer { text-align: center; padding: 32px 20px; color: var(--muted); font-size: .75rem; border-top: 1px solid var(--border); }
+
+    @media (max-width: 768px) {
+      .hw-monitor { top: auto; bottom: 20px; right: 20px; transform: scale(0.85); transform-origin: bottom right; }
+    }
   </style>
 </head>
 <body>
+
+<div class="hw-monitor" id="hwMonitor">
+  <div class="hw-row">
+    <span>SYSTEM</span>
+    <span style="color: var(--text);">ESP32 Core 1</span>
+  </div>
+  <div class="hw-row">
+    <span>CHANNEL</span>
+    <span><span id="hwCh" class="hw-val" style="color: var(--green);">1</span> <span style="font-size: 10px;">/ 13</span></span>
+  </div>
+  <div class="hw-row">
+    <span>RATE (PKT/s)</span>
+    <span><span id="hwPkts" class="hw-val" style="color: #f7c948;">0</span></span>
+  </div>
+  <div class="hw-row">
+    <span>FREE HEAP</span>
+    <span><span id="hwHeap" class="hw-val" style="color: var(--accent2);">220</span> <span style="font-size: 10px;">KB</span></span>
+  </div>
+</div>
 
 <header>
   <span class="ghost-icon">👻</span>
@@ -269,9 +325,12 @@
 
   <section>
     <h2>Canlı Çıktı Simülasyonu</h2>
-    <div class="terminal" id="terminal">
-      <span class="t-muted">⚡ SIBER SNIFF v5.0 — HAZIR</span><br>
-      <span class="t-muted">Mode: 1 (WiFi Beacon)</span><br><br>
+    <div class="terminal">
+      <div class="term-body" id="terminal">
+        <span class="t-muted">⚡ SIBER SNIFF v5.0 — HAZIR</span><br>
+        <span class="t-muted">Mode: 1 (WiFi Beacon)</span><br>
+        <span class="t-muted">Hopping Channels 1-13...</span><br><br>
+      </div>
     </div>
   </section>
 
@@ -352,34 +411,93 @@
 </footer>
 
 <script>
-  const terminal = document.getElementById('terminal');
+  // -- Donanım Monitörü --
+  const hwCh = document.getElementById('hwCh');
+  const hwPkts = document.getElementById('hwPkts');
+  const hwHeap = document.getElementById('hwHeap');
 
-  const lines = [
-    { cls: 'WIFI',  text: 'WIFI,AA:BB:CC:11:22:33,-62,Ev_Wifi,WPA2,6' },
-    { cls: 'WIFI',  text: 'WIFI,DD:EE:FF:44:55:66,-78,<HIDDEN>,WPA3,11' },
-    { cls: 'PROBE', text: 'PROBE,11:22:33:AA:BB:CC,-55,BROADCAST' },
-    { cls: 'PROBE', text: 'PROBE,44:55:66:DD:EE:FF,-71,Ofis_Net' },
-    { cls: 'STATS', text: 'STATS:PKT=14,DEV=3,CH=9' },
-    { cls: 'WIFI',  text: 'WIFI,00:11:22:33:44:55,-81,Komsu_5G,WPA2,1' },
-    { cls: 'PROBE', text: 'PROBE,77:88:99:AA:BB:CC,-60,BROADCAST' },
-    { cls: 'STATS', text: 'STATS:PKT=21,DEV=5,CH=3' },
-  ];
+  let currentHeap = 220;
+  let channel = 1;
+
+  // ESP32 Channel Hopping Simülasyonu (Açıklamadaki gibi 500ms)
+  setInterval(() => {
+    channel++;
+    if (channel > 13) channel = 1;
+    if (hwCh) hwCh.innerText = channel;
+  }, 500);
+
+  // Heap ve Paket Hızı Simülasyonu
+  setInterval(() => {
+    // RAM Dalgalanması
+    currentHeap += (Math.random() * 4 - 2);
+    if (currentHeap < 180) currentHeap = 180 + Math.random() * 5;
+    if (currentHeap > 260) currentHeap = 260 - Math.random() * 5;
+    if (hwHeap) hwHeap.innerText = Math.round(currentHeap);
+
+    // Saniyedeki Paket Yoğunluğu (Yoğunluğu rastgele değişir)
+    let pkts = Math.floor(Math.random() * 80) + 30;
+    if (hwPkts) hwPkts.innerText = pkts;
+  }, 800);
+
+
+  // -- Terminal Log Simülasyonu --
+  const terminal = document.getElementById('terminal');
+  
+  const macGen = () => {
+    const hex = "0123456789ABCDEF";
+    let mac = "";
+    for(let i=0; i<6; i++) {
+      mac += hex[Math.floor(Math.random() * 16)] + hex[Math.floor(Math.random() * 16)];
+      if(i < 5) mac += ":";
+    }
+    return mac;
+  };
+
+  const getLine = () => {
+    const types = ['WIFI', 'WIFI', 'PROBE', 'PROBE', 'BLE'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    const rssi = -Math.floor(Math.random() * 50 + 30);
+    const mac = macGen();
+    
+    if (type === 'WIFI') {
+      const ssids = ['Ev_Wifi', 'TurkTelekom_T4', 'Superonline_WiFi', '<HIDDEN>', 'Misafir_Ag'];
+      const ssid = ssids[Math.floor(Math.random() * ssids.length)];
+      return { cls: 'WIFI', text: `WIFI,${mac},${rssi},${ssid},WPA2,${channel}` };
+    } else if (type === 'PROBE') {
+      const targets = ['iPhone', 'Android_AP', 'BROADCAST', 'Free_WiFi'];
+      const target = targets[Math.floor(Math.random() * targets.length)];
+      return { cls: 'PROBE', text: `PROBE,${mac},${rssi},${target}` };
+    } else {
+      return { cls: 'BLE', text: `BLE,${mac},${rssi},Smart_Watch_Pro` };
+    }
+  };
 
   const colorMap = { WIFI: 't-wifi', PROBE: 't-probe', BLE: 't-ble', STATS: 't-stats' };
-  let i = 0;
+  let logCount = 0;
 
   function addLine() {
-    const l = lines[i % lines.length];
-    const span = document.createElement('span');
-    span.className = colorMap[l.cls] || '';
-    span.textContent = '> ' + l.text;
-    terminal.appendChild(span);
-    terminal.appendChild(document.createElement('br'));
+    // Arada bir istatistik bas
+    if (logCount > 0 && logCount % 7 === 0) {
+      const span = document.createElement('span');
+      span.className = 't-stats';
+      span.textContent = `> STATS:PKT=${Math.floor(Math.random()*200)+50},DEV=${Math.floor(Math.random()*15)+5},CH=${channel}`;
+      terminal.appendChild(span);
+      terminal.appendChild(document.createElement('br'));
+    } else {
+      const l = getLine();
+      const span = document.createElement('span');
+      span.className = colorMap[l.cls] || '';
+      span.textContent = '> ' + l.text;
+      terminal.appendChild(span);
+      terminal.appendChild(document.createElement('br'));
+    }
+    
     terminal.scrollTop = terminal.scrollHeight;
-    i++;
+    logCount++;
   }
 
-  setInterval(addLine, 1200);
+  // Biraz daha hızlı ve agresif bir akış (600ms)
+  setInterval(addLine, 600);
 </script>
 
 </body>
