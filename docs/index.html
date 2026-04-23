@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GhostSniff MEGA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080c10;
+      --surface: #0d1117;
+      --border: #1e2d40;
+      --accent: #00d4ff;
+      --accent2: #7928ca;
+      --warn: #ff6b35;
+      --text: #c9d1d9;
+      --muted: #6e7681;
+      --green: #3fb950;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Courier New', Courier, monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* SCANLINES */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.08) 2px, rgba(0,0,0,.08) 4px);
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* HEADER */
+    header {
+      text-align: center;
+      padding: 64px 20px 48px;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+
+    .ghost-icon { font-size: 4rem; display: block; margin-bottom: 16px; animation: float 3s ease-in-out infinite; }
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+    h1 {
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      letter-spacing: .15em;
+      color: var(--accent);
+      text-shadow: 0 0 30px rgba(0,212,255,.4);
+    }
+
+    .subtitle {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: .9rem;
+      letter-spacing: .1em;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .badge {
+      padding: 4px 14px;
+      border-radius: 4px;
+      font-size: .75rem;
+      letter-spacing: .08em;
+      border: 1px solid;
+    }
+
+    .badge-blue  { border-color: var(--accent);  color: var(--accent); }
+    .badge-purple{ border-color: var(--accent2); color: var(--accent2); }
+    .badge-green { border-color: var(--green);   color: var(--green); }
+
+    /* WARNING */
+    .warning-box {
+      max-width: 860px;
+      margin: 32px auto;
+      padding: 16px 20px;
+      border: 1px solid var(--warn);
+      border-left: 4px solid var(--warn);
+      border-radius: 6px;
+      background: rgba(255,107,53,.06);
+      color: var(--warn);
+      font-size: .85rem;
+      line-height: 1.6;
+    }
+
+    /* MAIN */
+    main { max-width: 960px; margin: 0 auto; padding: 0 20px 80px; }
+
+    section { margin-top: 56px; }
+
+    h2 {
+      font-size: 1rem;
+      letter-spacing: .15em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* MODES GRID */
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .card:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(0,212,255,.12); }
+
+    .card-icon { font-size: 1.8rem; margin-bottom: 10px; }
+    .card-title { font-size: .85rem; color: var(--accent); letter-spacing: .08em; margin-bottom: 6px; }
+    .card-desc  { font-size: .78rem; color: var(--muted); line-height: 1.5; }
+
+    /* PIN TABLE */
+    table { width: 100%; border-collapse: collapse; font-size: .83rem; }
+    th { text-align: left; padding: 10px 14px; color: var(--muted); font-weight: normal; border-bottom: 1px solid var(--border); }
+    td { padding: 10px 14px; border-bottom: 1px solid rgba(30,45,64,.5); }
+    tr:last-child td { border-bottom: none; }
+    td:first-child { color: var(--accent); font-family: monospace; }
+
+    /* SERIAL PROTOCOL */
+    .proto-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .proto-row {
+      display: flex;
+      gap: 16px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(30,45,64,.5);
+      font-size: .8rem;
+      align-items: baseline;
+    }
+    .proto-row:last-child { border-bottom: none; }
+
+    .proto-tag {
+      min-width: 110px;
+      color: var(--green);
+      font-family: monospace;
+      font-size: .75rem;
+    }
+    .proto-desc { color: var(--muted); }
+
+    /* TERMINAL DEMO */
+    .terminal {
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      font-size: .8rem;
+      line-height: 1.9;
+      overflow-x: auto;
+    }
+    .t-prompt { color: var(--accent2); }
+    .t-wifi   { color: var(--accent); }
+    .t-probe  { color: #f7c948; }
+    .t-ble    { color: #9d6eff; }
+    .t-stats  { color: var(--green); }
+    .t-muted  { color: var(--muted); }
+
+    /* INSTALL */
+    .step { display: flex; gap: 16px; margin-bottom: 20px; }
+    .step-num {
+      min-width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem;
+    }
+    .step-body { padding-top: 4px; font-size: .85rem; line-height: 1.7; color: var(--muted); }
+    .step-body strong { color: var(--text); }
+    code { background: rgba(0,212,255,.07); border: 1px solid var(--border); border-radius: 3px; padding: 1px 6px; font-size: .8em; color: var(--accent); }
+
+    /* GITHUB BUTTON */
+    .cta { text-align: center; margin-top: 64px; }
+    .btn {
+      display: inline-block;
+      padding: 14px 36px;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: .9rem;
+      letter-spacing: .1em;
+      transition: background .2s, color .2s;
+    }
+    .btn:hover { background: var(--accent); color: var(--bg); }
+
+    /* FOOTER */
+    footer { text-align: center; padding: 32px 20px; color: var(--muted); font-size: .75rem; border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="ghost-icon">👻</span>
+  <h1>GhostSniff MEGA</h1>
+  <p class="subtitle">WiFi &amp; BLE Sniffer · ESP32 · Çift Kart Mimarisi · v5.0</p>
+  <div class="badges">
+    <span class="badge badge-blue">C++ / Arduino</span>
+    <span class="badge badge-purple">ESP32 · Deneyap Kart</span>
+    <span class="badge badge-green">MIT Lisans</span>
+  </div>
+</header>
+
+<main>
+
+  <div class="warning-box">
+    ⚠ <strong>Uyarı:</strong> Bu araç yalnızca eğitim ve araştırma amaçlıdır.
+    Yalnızca kendi cihazlarınızda ve ağlarınızda test edin.
+    İzinsiz kullanım yasalara aykırıdır.
+  </div>
+
+  <section>
+    <h2>Çalışma Modları</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="card-icon">📡</div>
+        <div class="card-title">MOD 1 — Beacon Sniffer</div>
+        <div class="card-desc">Çevredeki WiFi AP'lerini yakalar. SSID, MAC, RSSI, şifreleme türü ve kanal bilgisini raporlar.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🕵️</div>
+        <div class="card-title">MOD 2 — Probe Sniffer</div>
+        <div class="card-desc">Cihazların daha önce bağlandığı ağları aradığı probe request çerçevelerini tespit eder.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📱</div>
+        <div class="card-title">MOD 3 — BLE Scanner</div>
+        <div class="card-desc">Çevredeki Bluetooth cihazlarını tarar. MAC, RSSI ve cihaz adını raporlar.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">⌨️</div>
+        <div class="card-title">MOD 4 — BLE Keyboard</div>
+        <div class="card-desc">PC'ye kablosuz HID klavye olarak bağlanır. F1-F12, kısayollar ve makrolar desteklenir.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">💬</div>
+        <div class="card-title">MOD 10 — Chat</div>
+        <div class="card-desc">MEGA master üzerinden mesaj alışverişi için genişletilmiş iletişim modu.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔄</div>
+        <div class="card-title">Kanal Atlama</div>
+        <div class="card-desc">2.4 GHz kanal 1-13 arası 500ms aralıklarla otomatik döner. Manuel CH komutuyla kilitlenebilir.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Canlı Çıktı Simülasyonu</h2>
+    <div class="terminal" id="terminal">
+      <span class="t-muted">⚡ SIBER SNIFF v5.0 — HAZIR</span><br>
+      <span class="t-muted">Mode: 1 (WiFi Beacon)</span><br><br>
+    </div>
+  </section>
+
+  <section>
+    <h2>Pin Bağlantıları</h2>
+    <table>
+      <tr><th>Pin (Deneyap Kart)</th><th>Bağlantı</th></tr>
+      <tr><td>D8</td><td>Serial2 RX → MEGA TX</td></tr>
+      <tr><td>D4</td><td>Serial2 TX → MEGA RX</td></tr>
+      <tr><td>D9</td><td>SD Kart CS</td></tr>
+      <tr><td>D13</td><td>SD Kart MOSI</td></tr>
+      <tr><td>D14</td><td>SD Kart SCK</td></tr>
+      <tr><td>D15</td><td>SD Kart MISO</td></tr>
+      <tr><td>LED_BUILTIN</td><td>Durum LED'i</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Serial2 Protokolü (ESP32 → MEGA)</h2>
+    <div class="proto-block">
+      <div class="proto-row">
+        <span class="proto-tag">WIFI,...</span>
+        <span class="proto-desc">MAC, RSSI, SSID, Şifreleme, Kanal</span>
+      </div>
+      <div class="proto-row">
+        <span class="proto-tag">PROBE,...</span>
+        <span class="proto-desc">MAC, RSSI, Hedef SSID</span>
+      </div>
+      <div class="proto-row">
+        <span class="proto-tag">BLE,...</span>
+        <span class="proto-desc">MAC, RSSI, Cihaz Adı</span>
+      </div>
+      <div class="proto-row">
+        <span class="proto-tag">STATS:...</span>
+        <span class="proto-desc">Paket sayısı, benzersiz cihaz, aktif kanal</span>
+      </div>
+      <div class="proto-row">
+        <span class="proto-tag">KB:...</span>
+        <span class="proto-desc">Klavye durum bildirimleri (CONNECTED / WAITING / OK)</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Kurulum</h2>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body"><strong>Arduino IDE</strong>'ye ESP32 desteği ekle: Board Manager → <em>esp32 by Espressif Systems</em></div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">Library Manager'dan <code>BleKeyboard</code> (T-vK) kütüphanesini kur</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">Board olarak <strong>Deneyap Kart</strong> (veya uyumlu ESP32) seç</div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">ESP32 <code>D8/D4</code> pinlerini Arduino MEGA <code>TX/RX</code>'e ve ortak <code>GND</code>'e bağla</div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body"><code>MEGA_Sniff_FINAL.ino</code> dosyasını yükle</div>
+    </div>
+  </section>
+
+  <div class="cta">
+    <a class="btn" href="https://github.com/Eren-Oztk/GhostSniff-MEGA" target="_blank">
+      ★ GitHub'da Görüntüle
+    </a>
+  </div>
+
+</main>
+
+<footer>
+  Built by <a href="https://github.com/Eren-Oztk" style="color:var(--accent);text-decoration:none;">Eren-Oztk</a> &nbsp;·&nbsp; MIT Lisans &nbsp;·&nbsp; 2026
+</footer>
+
+<script>
+  const terminal = document.getElementById('terminal');
+
+  const lines = [
+    { cls: 'WIFI',  text: 'WIFI,AA:BB:CC:11:22:33,-62,Ev_Wifi,WPA2,6' },
+    { cls: 'WIFI',  text: 'WIFI,DD:EE:FF:44:55:66,-78,<HIDDEN>,WPA3,11' },
+    { cls: 'PROBE', text: 'PROBE,11:22:33:AA:BB:CC,-55,BROADCAST' },
+    { cls: 'PROBE', text: 'PROBE,44:55:66:DD:EE:FF,-71,Ofis_Net' },
+    { cls: 'STATS', text: 'STATS:PKT=14,DEV=3,CH=9' },
+    { cls: 'WIFI',  text: 'WIFI,00:11:22:33:44:55,-81,Komsu_5G,WPA2,1' },
+    { cls: 'PROBE', text: 'PROBE,77:88:99:AA:BB:CC,-60,BROADCAST' },
+    { cls: 'STATS', text: 'STATS:PKT=21,DEV=5,CH=3' },
+  ];
+
+  const colorMap = { WIFI: 't-wifi', PROBE: 't-probe', BLE: 't-ble', STATS: 't-stats' };
+  let i = 0;
+
+  function addLine() {
+    const l = lines[i % lines.length];
+    const span = document.createElement('span');
+    span.className = colorMap[l.cls] || '';
+    span.textContent = '> ' + l.text;
+    terminal.appendChild(span);
+    terminal.appendChild(document.createElement('br'));
+    terminal.scrollTop = terminal.scrollHeight;
+    i++;
+  }
+
+  setInterval(addLine, 1200);
+</script>
+
+</body>
+</html>

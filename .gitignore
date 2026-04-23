@@ -1,0 +1,29 @@
+# Secrets
+.env
+.env.local
+secrets.h
+credentials.h
+config.local.*
+*.key
+*.pem
+
+# Logs
+*.log
+chat_log.txt
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Arduino / ESP32
+build/
+.pio/
+*.ino.elf
+*.ino.hex
+.pioenvs/
