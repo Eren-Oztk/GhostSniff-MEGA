@@ -140,4 +140,4 @@ KB:<komut>    → Klavye komutu (Mod 4)
 
 ## Lisans
 
-MIT © 2026 Eren Öztürk
+MIT © 2026 Eren Özatak
